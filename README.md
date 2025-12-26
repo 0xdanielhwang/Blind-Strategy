@@ -1,110 +1,109 @@
-# FHEVM Hardhat Template
+# Blind Strategy Game
 
-A Hardhat-based template for developing Fully Homomorphic Encryption (FHE) enabled Solidity smart contracts using the
-FHEVM protocol by Zama.
+Blind Strategy is a privacy-first quiz game built on Zama's FHEVM. Players answer four strategy questions, submit encrypted choices on-chain, and receive encrypted points when all answers are correct. The game keeps both answers and scores confidential while still allowing verification and rewards.
 
-## Quick Start
+## Why this project exists
+Most on-chain games leak user choices and scoring logic to the public mempool and blockchain state. That makes honest play and fair rewards hard when strategies should be private. Blind Strategy uses fully homomorphic encryption so that answers, correct choices, and points remain encrypted while the contract can still compare and reward.
 
-For detailed instructions see:
-[FHEVM Hardhat Quick Start Tutorial](https://docs.zama.ai/protocol/solidity-guides/getting-started/quick-start-tutorial)
+## Key capabilities
+- Players join once and receive a private, encrypted points balance.
+- Four questions with four options each; answers are submitted as encrypted values.
+- Correct answers are encrypted and stored in the contract.
+- Encrypted verification and reward flow: all correct gives +100 points (still encrypted).
+- Frontend uses the Zama relayer to encrypt inputs before submission.
 
-### Prerequisites
+## Advantages
+- Confidential gameplay: answers and scores are not exposed on-chain.
+- Fair rewards: verification happens inside the contract on encrypted data.
+- Clear player flow: join, answer, submit, and read your encrypted points.
+- Separation of concerns: Solidity handles verification and rewards, frontend handles encryption and UX.
 
-- **Node.js**: Version 20 or higher
-- **npm or yarn/pnpm**: Package manager
+## Tech stack
+- Smart contracts: Solidity + Hardhat + hardhat-deploy
+- FHE: Zama FHEVM, @fhevm/solidity, Zama relayer SDK
+- Frontend: React + Vite + RainbowKit + Viem (reads) + Ethers (writes)
+- Tooling: TypeScript, ESLint, Prettier
 
-### Installation
+## How it works (end-to-end)
+1. Player joins the game via `joinGame()`.
+2. Frontend asks four questions and collects one choice per question.
+3. Answers are encrypted with the Zama relayer and submitted via `submitAnswers(...)`.
+4. Contract compares encrypted answers to encrypted correct values (1, 2, 3, 4).
+5. If all are correct, encrypted points increase by 100.
+6. Player can read their encrypted answers and points with view calls and decrypt client-side.
 
-1. **Install dependencies**
+## Contract behavior
+Contract: `contracts/BlindStrategyGame.sol`
+- Stores encrypted correct answers as `euint8`.
+- Stores per-player encrypted answers and encrypted points.
+- Emits events when a player joins or submits.
+- View methods expose encrypted values only; no cleartext leaks.
 
-   ```bash
-   npm install
-   ```
+## Repository layout
+- `contracts/`: Solidity contracts
+- `deploy/`: Deployment scripts (hardhat-deploy)
+- `tasks/`: Hardhat tasks
+- `test/`: Contract tests
+- `frontend/`: React frontend (Vite)
+- `deployments/`: Network deployments and generated ABIs
+- `docs/`: Zama reference docs
 
-2. **Set up environment variables**
+## Prerequisites
+- Node.js 20+
+- npm
+- A Sepolia account funded with test ETH
 
-   ```bash
-   npx hardhat vars set MNEMONIC
-
-   # Set your Infura API key for network access
-   npx hardhat vars set INFURA_API_KEY
-
-   # Optional: Set Etherscan API key for contract verification
-   npx hardhat vars set ETHERSCAN_API_KEY
-   ```
-
-3. **Compile and test**
-
-   ```bash
-   npm run compile
-   npm run test
-   ```
-
-4. **Deploy to local network**
-
-   ```bash
-   # Start a local FHEVM-ready node
-   npx hardhat node
-   # Deploy to local network
-   npx hardhat deploy --network localhost
-   ```
-
-5. **Deploy to Sepolia Testnet**
-
-   ```bash
-   # Deploy to Sepolia
-   npx hardhat deploy --network sepolia
-   # Verify contract on Etherscan
-   npx hardhat verify --network sepolia <CONTRACT_ADDRESS>
-   ```
-
-6. **Test on Sepolia Testnet**
-
-   ```bash
-   # Once deployed, you can run a simple test on Sepolia.
-   npx hardhat test --network sepolia
-   ```
-
-## 📁 Project Structure
-
-```
-fhevm-hardhat-template/
-├── contracts/           # Smart contract source files
-│   └── FHECounter.sol   # Example FHE counter contract
-├── deploy/              # Deployment scripts
-├── tasks/               # Hardhat custom tasks
-├── test/                # Test files
-├── hardhat.config.ts    # Hardhat configuration
-└── package.json         # Dependencies and scripts
+## Install
+```bash
+npm install
 ```
 
-## 📜 Available Scripts
+## Compile and test
+```bash
+npm run compile
+npm run test
+```
 
-| Script             | Description              |
-| ------------------ | ------------------------ |
-| `npm run compile`  | Compile all contracts    |
-| `npm run test`     | Run all tests            |
-| `npm run coverage` | Generate coverage report |
-| `npm run lint`     | Run linting checks       |
-| `npm run clean`    | Clean build artifacts    |
+## Local development (contracts)
+```bash
+npm run chain
+npm run deploy:localhost
+```
 
-## 📚 Documentation
+## Sepolia deployment
+1. Create `.env` with private key and Infura key (no mnemonic).
+   - `PRIVATE_KEY=...`
+   - `INFURA_API_KEY=...`
+   - `ETHERSCAN_API_KEY=...` (optional)
+2. Deploy:
+```bash
+npm run deploy:sepolia
+```
+3. Verify (optional):
+```bash
+npm run verify:sepolia -- <CONTRACT_ADDRESS>
+```
 
-- [FHEVM Documentation](https://docs.zama.ai/fhevm)
-- [FHEVM Hardhat Setup Guide](https://docs.zama.ai/protocol/solidity-guides/getting-started/setup)
-- [FHEVM Testing Guide](https://docs.zama.ai/protocol/solidity-guides/development-guide/hardhat/write_test)
-- [FHEVM Hardhat Plugin](https://docs.zama.ai/protocol/solidity-guides/development-guide/hardhat)
+## Frontend integration notes
+- The frontend reads the ABI from `deployments/sepolia` and must use the generated ABI.
+- Contract reads use Viem; writes use Ethers.
+- The frontend does not use environment variables, local storage, or localhost networks.
+- The frontend expects a real network (Sepolia) and wallet connection.
 
-## 📄 License
+## Testing focus
+- Join flow and single submission per player
+- Encrypted answer comparisons
+- Encrypted reward updates
 
-This project is licensed under the BSD-3-Clause-Clear License. See the [LICENSE](LICENSE) file for details.
+## Problem solved
+Blind Strategy demonstrates how to build a fair, privacy-preserving on-chain game. It removes the incentive for mempool snooping or chain analysis by ensuring that choices and scores are never stored in plaintext.
 
-## 🆘 Support
+## Future roadmap
+- Multiple rounds and question sets with encrypted rotation
+- Time-limited rounds and anti-spam gates
+- Encrypted leaderboards with selective disclosure
+- Multi-player tournaments and team modes
+- UX improvements for decryption and proof handling
 
-- **GitHub Issues**: [Report bugs or request features](https://github.com/zama-ai/fhevm/issues)
-- **Documentation**: [FHEVM Docs](https://docs.zama.ai)
-- **Community**: [Zama Discord](https://discord.gg/zama)
-
----
-
-**Built with ❤️ by the Zama team**
+## License
+BSD-3-Clause-Clear
