@@ -2,7 +2,11 @@ import { DeployFunction } from "hardhat-deploy/types";
 import { HardhatRuntimeEnvironment } from "hardhat/types";
 
 const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
-  const { deployer } = await hre.getNamedAccounts();
+  const signers = await hre.ethers.getSigners();
+  const deployer = signers[0]?.address;
+  if (!deployer) {
+    throw new Error("Missing deployer signer. Set PRIVATE_KEY in .env for sepolia deployments.");
+  }
   const { deploy } = hre.deployments;
 
   const deployedFHECounter = await deploy("FHECounter", {
